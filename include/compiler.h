@@ -169,6 +169,10 @@ size_t strlcpy(char *, const char *, size_t);
 char *strrchrnul(const char *, int);
 #endif
 
+#if !defined(HAVE_STRLCAT) || !HAVE_DECL_STRLCAT
+size_t strlcat(char *, const char *, size_t);
+#endif
+
 #ifndef __cplusplus		/* C++ has false, true, bool as keywords */
 # ifdef HAVE_STDBOOL_H
 #  include <stdbool.h>
