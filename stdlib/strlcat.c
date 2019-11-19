@@ -29,7 +29,7 @@ size_t strlcat(char *dest, const char *src, size_t size)
     size_t n;
 
     /* find the NULL terminator in dest */
-    for (n = 0; i < size && dest[n] != '\0'; n++)
+    for (n = 0; n < size && dest[n] != '\0'; n++)
         ;
 
     /* destination was not NULL terminated. Return the initial size */

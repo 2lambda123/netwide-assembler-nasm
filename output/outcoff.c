@@ -1072,14 +1072,14 @@ static void coff_symbol(char *name, int32_t strpos, int32_t value,
 
 static void coff_write_symbols(void)
 {
-    char filename[18];
+    char filename[19];
     uint32_t i;
 
     /*
      * The `.file' record, and the file name auxiliary record.
      */
     coff_symbol(".file", 0L, 0L, -2, 0, 0x67, 1);
-    strncpy(filename, inname, 18);
+    filename_debug_remap(filename, inname, 19);
     nasm_write(filename, 18, ofile);
 
     /*

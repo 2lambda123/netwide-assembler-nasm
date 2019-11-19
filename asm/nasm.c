@@ -942,7 +942,8 @@ enum text_options {
     OPT_KEEP_ALL,
     OPT_NO_LINE,
     OPT_DEBUG,
-    OPT_REPRODUCIBLE
+    OPT_REPRODUCIBLE,
+    OPT_DEBUG_PREFIX_MAP
 };
 enum need_arg {
     ARG_NO,
@@ -975,6 +976,7 @@ static const struct textargs textopts[] = {
     {"no-line",  OPT_NO_LINE, ARG_NO, 0},
     {"debug",    OPT_DEBUG, ARG_MAYBE, 0},
     {"reproducible", OPT_REPRODUCIBLE, ARG_NO, 0},
+    {"debug-prefix-map", OPT_DEBUG_PREFIX_MAP, ARG_YES, 0},
     {NULL, OPT_BOGUS, ARG_NO, 0}
 };
 
@@ -1337,6 +1339,26 @@ static bool process_arg(char *p, char *q, int pass)
                     break;
                 case OPT_REPRODUCIBLE:
                     reproducible = true;
+                    break;
+                case OPT_DEBUG_PREFIX_MAP: {
+                    struct debug_prefix_list *d;
+                    char *c;
+                    c = strchr(param, '=');
+
+                    if (!c) {
+                        nasm_error(ERR_NONFATAL | ERR_NOFILE | ERR_USAGE,
+                                   "option `--%s' must be of the form `BASE=DEST'", p);
+                        break;
+                    }
+
+                    *c = '\0';
+                    d = nasm_malloc(sizeof(*d));
+                    d->next = debug_prefixes;
+                    d->base = nasm_strdup(param);
+                    d->dest = nasm_strdup(c + 1);
+                    debug_prefixes = d;
+                    *c = '=';
+                    }
                     break;
                 case OPT_HELP:
                     help(stdout);
@@ -2296,6 +2318,8 @@ static void help(FILE *out)
         "   --lpostfix str append the given string to local symbols\n"
         "\n"
         "   --reproducible attempt to produce run-to-run identical output\n"
+        "   --debug-prefix-map base=dest\n"
+        "                  remap paths starting with 'base' to 'dest' in output files\n"
         "\n"
         "    -w+x          enable warning x (also -Wx)\n"
         "    -w-x          disable warning x (also -Wno-x)\n"
