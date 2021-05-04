@@ -110,6 +110,8 @@ static void as86_sect_write(struct Section *, const uint8_t *,
 
 static void as86_init(void)
 {
+    char filename[FILENAME_MAX];
+
     stext.data = saa_init(1L);
     stext.datalen = 0L;
     stext.head = stext.last = NULL;
@@ -131,7 +133,7 @@ static void as86_init(void)
     strslen = 0;
 
     /* as86 module name = input file minus extension */
-    as86_add_string(filename_set_extension(inname, ""));
+    as86_add_string(filename_debug_remap(filename, filename_set_extension(inname, ""), sizeof(filename)));
 }
 
 static void as86_cleanup(void)

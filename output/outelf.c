@@ -553,7 +553,7 @@ static void elf_init(void)
     };
     const char * const *p;
 
-    strlcpy(elf_module, inname, sizeof(elf_module));
+    filename_debug_remap(elf_module, inname, sizeof(elf_module));
     sects = NULL;
     nsects = sectlen = 0;
     syms = saa_init((int32_t)sizeof(struct elf_symbol));
