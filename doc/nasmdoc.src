@@ -2424,17 +2424,22 @@ A single pair of parentheses is a subcase of a single, unused argument:
 
 This is similar to the behavior of the C preprocessor.
 
-\b If declared with an \c{=}, NASM will evaluate the argument as an
-expression after expansion.
+\b If declared with an \c{=}, NASM will expand the argument and then
+evaluate it as a numeric expression.
 
-\b If an argument declared with an \c{&}, a macro parameter will be
-turned into a quoted string after expansion.
+\b If declared with an \c{&}, NASM will expand the argument and then
+turn into a quoted string; if the argument already \e{is} a quoted
+string, it will be quoted again.
+
+\b If declared with \c{&&}, NASM will expand the argument and then
+turn it into a quoted string, but if the argument already is a quoted
+string, it will \e{not} be re-quoted.
 
 \b If declared with a \c{+}, it is a greedy or variadic parameter; it
-includes any subsequent commas and parameters.
+will include any subsequent commas and parameters.
 
 \b If declared with an \c{!}, NASM will not strip whitespace and
-braces (useful in conjunction with \c{&}).
+braces (potentially useful in conjunction with \c{&} or \c{&&}.)
 
 For example:
 
@@ -2849,7 +2854,9 @@ means "until N-1 characters before the end of string", i.e. \c{-1}
 means until end of string, \c{-2} until one character before, etc.
 
 The corresponding preprocessor function is \c{%substr()}, see
-\k{f_substr}.
+\k{f_substr}, however please note that the default value for the
+length parameter, if omitted, is \c{-1} rather than \c{1} for
+\c{%substr()}.
 
 
 \H{ppfunc} \i{Preprocessor Functions}
@@ -2859,6 +2866,13 @@ single-line macros. They expand to a string depending on its
 arguments, and can be used in any context where single-line macro
 expansion would be performed. Preprocessor functions were introduced
 in NASM 2.16.
+
+\S{f_abs} \i\c{%abs()} Function
+
+The \c{%abs()} function evaluates its first argument as an expression,
+and then emits the absolute value. This will always be emitted as a
+single token containing a decimal number; no minus sign will be
+emitted even if the input value is the maximum negative number.
 
 \S{f_cond} \i\c{%cond()} Function
 
@@ -2934,9 +2948,9 @@ argument to the conditional using \c{\{\}}:
 
 The \c{%num()} function evaluates its arguments as expressions, and
 then produces a quoted string encoding the first argument as an
-\e{unsigned} integer. The second argument is the encoding base (from 2
-to 64, default 10) and the third argument is the desired number of
-digits (max 253, default -1).
+\e{unsigned} integer. The second argument is the desired number of
+digits (max 253, default -1), and the second argument is the encoding
+base (from 2 to 64, default 10.)
 
 Only the first argument is required.
 
@@ -2948,6 +2962,10 @@ generates an empty string (thus, the first digit will never be zero.)
 The full 64-symbol set used is, in order:
 
 \c 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@_
+
+If a \e{signed} number needs to be converted to a string, use
+\c{%abs()}, \c{%cond()}, and \c{%strcat()} to format the signed number
+string to your specific output requirements.
 
 
 \S{f_sel} \i\c{%sel()} Function
@@ -3005,13 +3023,17 @@ in the same way the \i\c{%strlen} directive would, see \k{strlen}.
 
 The \c{%substr()} function extracts a substring of a quoted string, in
 the same way the \i\c{%substr} directive would, see \k{substr}. Note
-that unlike the \c{%substr} directive, a comma is required after the
-string argument.
+that unlike the \c{%substr} directive, commas are required between all
+parameters, is required after the string argument, and that the
+default for the length argument, if omitted, is \c{-1} (i.e. the
+remainder of the string) rather than \c{1}.
 
 \c ; The following lines are all equivalent
 \c %define  mychar 'yzw'
 \c %substr  mychar 'xyzw' 2,-1
+\c %xdefine mychar %substr('xyzw',2,3)
 \c %xdefine mychar %substr('xyzw',2,-1)
+\c %xdefine mychar %substr('xyzw',2)
 
 
 \S{f_tok} \i\c{%tok()} function
@@ -5572,47 +5594,87 @@ are excluded from the symbol mangling and also not marked as global.
 \H{CPU} \i\c{CPU}: Defining CPU Dependencies
 
 The \i\c{CPU} directive restricts assembly to those instructions which
-are available on the specified CPU.
+are available on the specified CPU. At the moment, it is primarily
+used to enforce unavailable \e{encodings} of instructions, such as
+5-byte jumps on the 8080.
 
-Options are:
+(If someone would volunteer to work through the database and add
+proper annotations to each instruction, this could be greatly
+improved. Please contact the developers to volunteer, see \{contact}.)
 
-\b\c{CPU 8086}          Assemble only 8086 instruction set
+Current CPU keywords are:
 
-\b\c{CPU 186}           Assemble instructions up to the 80186 instruction set
+\b\c{CPU 8086}        - Assemble only 8086 instruction set
 
-\b\c{CPU 286}           Assemble instructions up to the 286 instruction set
+\b\c{CPU 186}         - Assemble instructions up to the 80186 instruction set
 
-\b\c{CPU 386}           Assemble instructions up to the 386 instruction set
+\b\c{CPU 286}         - Assemble instructions up to the 286 instruction set
 
-\b\c{CPU 486}           486 instruction set
+\b\c{CPU 386}         - Assemble instructions up to the 386 instruction set
 
-\b\c{CPU 586}           Pentium instruction set
+\b\c{CPU 486}         - 486 instruction set
 
-\b\c{CPU PENTIUM}       Same as 586
+\b\c{CPU 586}         - Pentium instruction set
 
-\b\c{CPU 686}           P6 instruction set
+\b\c{CPU PENTIUM}     - Same as 586
 
-\b\c{CPU PPRO}          Same as 686
+\b\c{CPU 686}         - P6 instruction set
 
-\b\c{CPU P2}            Same as 686
+\b\c{CPU PPRO}        - Same as 686
 
-\b\c{CPU P3}            Pentium III (Katmai) instruction sets
+\b\c{CPU P2}          - Same as 686
 
-\b\c{CPU KATMAI}        Same as P3
+\b\c{CPU P3}          - Pentium III (Katmai) instruction sets
 
-\b\c{CPU P4}            Pentium 4 (Willamette) instruction set
+\b\c{CPU KATMAI}      - Same as P3
 
-\b\c{CPU WILLAMETTE}    Same as P4
+\b\c{CPU P4}          - Pentium 4 (Willamette) instruction set
 
-\b\c{CPU PRESCOTT}      Prescott instruction set
+\b\c{CPU WILLAMETTE}  - Same as P4
 
-\b\c{CPU X64}           x86-64 (x64/AMD64/Intel 64) instruction set
+\b\c{CPU PRESCOTT}    - Prescott instruction set
 
-\b\c{CPU IA64}          IA64 CPU (in x86 mode) instruction set
+\b\c{CPU X64}         - x86-64 (x64/AMD64/Intel 64) instruction set
 
-All options are case insensitive.  All instructions will be selected
-only if they apply to the selected CPU or lower.  By default, all
-instructions are available.
+\b\c{CPU IA64}        - IA64 CPU (in x86 mode) instruction set
+
+\b\c{CPU DEFAULT}     - All available instructions
+
+\b\c{CPU ALL}	      - All available instructions \e{and flags}
+
+All options are case insensitive.
+
+In addition, optional flags can be specified to modify the instruction
+selections. These can be combined with a CPU declaration or specified
+alone. They can be prefixed by \c{+} (add flag, default), \c{-}
+(remove flag) or \c{*} (set flag to default); these prefixes are
+"sticky", so:
+
+\c      cpu -foo,bar
+
+means remove both the \c{foo} and \c{bar} options.
+
+If prefixed with \c{no}, it inverts the meaning of the flag, but this
+is not sticky, so:
+
+\c      cpu nofoo,bar
+
+means remove the \c{foo} flag but add the \c{bar} flag.
+
+Currently available flags are:
+
+\b\c{EVEX} - Enable generation of EVEX (AVX-512) encoded instructions
+without an explicit \c{\{evex\}} prefix. Default on.
+
+\b\c\{VEX} - Enable generation of VEX (AVX) or XOP encoded
+instructions without an explict \c{\{vex\}} prefix. Default on.
+
+\b\c{LATEVEX} - Enable generation of VEX (AVX) encoding of
+instructions where the VEX instructions forms were introduced
+\e{after} the corresponding EVEX (AVX-512) instruction forms without
+requiring an explicit \c{\{vex\}} prefix. This is implicit if the
+\c{EVEX} flag is disabled and the \c{VEX} flag is enabled. Default
+off.
 
 
 \H{FLOAT} \i\c{FLOAT}: Handling of \I{floating-point, constants}floating-point constants
@@ -5621,19 +5683,19 @@ By default, floating-point constants are rounded to nearest, and IEEE
 denormals are supported.  The following options can be set to alter
 this behaviour:
 
-\b\c{FLOAT DAZ}         Flush denormals to zero
+\b\c{FLOAT DAZ}       - Flush denormals to zero
 
-\b\c{FLOAT NODAZ}       Do not flush denormals to zero (default)
+\b\c{FLOAT NODAZ}     - Do not flush denormals to zero (default)
 
-\b\c{FLOAT NEAR}        Round to nearest (default)
+\b\c{FLOAT NEAR}      - Round to nearest (default)
 
-\b\c{FLOAT UP}          Round up (toward +Infinity)
+\b\c{FLOAT UP}        - Round up (toward +Infinity)
 
-\b\c{FLOAT DOWN}        Round down (toward -Infinity)
+\b\c{FLOAT DOWN}      - Round down (toward -Infinity)
 
-\b\c{FLOAT ZERO}        Round toward zero
+\b\c{FLOAT ZERO}      - Round toward zero
 
-\b\c{FLOAT DEFAULT}     Restore default settings
+\b\c{FLOAT DEFAULT}   - Restore default settings
 
 The standard macros \i\c{__?FLOAT_DAZ?__}, \i\c{__?FLOAT_ROUND?__}, and
 \i\c{__?FLOAT?__} contain the current state, as long as the programmer
